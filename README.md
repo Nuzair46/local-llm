@@ -1,35 +1,48 @@
-# Local CPU LLM with Docker Compose
+# Local CPU LLM with LM Studio (llmster)
 
-This project runs an Ollama container in CPU mode with configurable limits.
+This project runs LM Studio headless server (`lmstudio/llmster-preview:cpu`) in CPU mode with configurable limits.
 
 ## Prerequisites
 
 - Docker Engine
 - Docker Compose plugin (`docker compose`)
 
-## Files
-
-- `docker-compose.yml`: service definition and resource limits.
-- `scripts/start_ollama.sh`: starts Ollama, waits for readiness, and pulls the model.
-
 ## Quick Start
 
 1. Start the service:
 
 ```bash
-docker compose --profile development up -d
+docker compose --profile development up -d llm
 ```
 
-2. Watch logs (first boot pulls the model and can take time):
+2. Watch logs:
 
 ```bash
 docker compose --profile development logs -f llm
 ```
 
-3. Check container status:
+3. Download a model in the LM Studio catalog format:
 
 ```bash
-docker compose --profile development ps
+docker compose --profile development exec llm \
+  lms get "${RAG_LOCAL_LLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-GGUF}" --yes
+```
+
+4. Load the model with a 16k context window and a stable identifier:
+
+```bash
+docker compose --profile development exec llm \
+  lms load "${RAG_LOCAL_LLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-GGUF}" \
+  --identifier "${LM_STUDIO_MODEL_IDENTIFIER:-qwen2.5-7b-ctx16k}" \
+  --context-length "${LLM_CONTEXT_LENGTH:-16000}" \
+  --gpu off \
+  --yes
+```
+
+5. Verify the model is loaded:
+
+```bash
+docker compose --profile development exec llm lms ps --json
 ```
 
 ## Configuration
@@ -37,31 +50,36 @@ docker compose --profile development ps
 Set environment variables in a local `.env` file (same directory as `docker-compose.yml`) or inline in your shell.
 
 ```env
-LLM_PORT=11434
+LLM_PORT=1234
 LLM_CPUS=12
 LLM_THREADS=12
 LLM_MEM_LIMIT=32g
 LLM_CONTEXT_LENGTH=16000
-RAG_LOCAL_LLM_MODEL=qwen2.5:7b
+RAG_LOCAL_LLM_MODEL=Qwen/Qwen2.5-7B-Instruct-GGUF
+LM_STUDIO_MODEL_IDENTIFIER=qwen2.5-7b-ctx16k
 ```
 
 Meaning:
 
-- `LLM_PORT`: host port mapped to Ollama (`11434` in container).
+- `LLM_PORT`: host port mapped to LM Studio server (`1234` in container).
 - `LLM_CPUS`: CPU quota for the container.
-- `LLM_THREADS`: thread count exposed to runtime (`OMP_NUM_THREADS`).
+- `LLM_THREADS`: thread count exposed to runtime (`OMP_NUM_THREADS`, `GGML_NUM_THREADS`, `OPENBLAS_NUM_THREADS`).
 - `LLM_MEM_LIMIT`: memory cap for container and swap cap.
-- `LLM_CONTEXT_LENGTH`: default context window (`OLLAMA_CONTEXT_LENGTH`).
-- `RAG_LOCAL_LLM_MODEL`: model pulled on startup.
+- `LLM_CONTEXT_LENGTH`: context window passed to `lms load`.
+- `RAG_LOCAL_LLM_MODEL`: LM Studio catalog model key (`Qwen/Qwen2.5-7B-Instruct-GGUF`).
+- `LM_STUDIO_MODEL_IDENTIFIER`: model name served on OpenAI-compatible endpoints.
 
-## Test a Request
+## OpenAI-Compatible Test
 
 ```bash
-curl http://localhost:11434/api/generate \
+curl http://localhost:1234/v1/chat/completions \
+  -H "Content-Type: application/json" \
   -d '{
-    "model":"qwen2.5:7b",
-    "prompt":"Say hello in one short sentence.",
-    "stream": false
+    "model":"qwen2.5-7b-ctx16k",
+    "messages":[
+      {"role":"user","content":"Say hello in one short sentence."}
+    ],
+    "temperature":0.2
   }'
 ```
 

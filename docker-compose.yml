@@ -1,31 +1,29 @@
 services:
   llm:
-    image: ollama/ollama:latest
-    entrypoint: ["/bin/sh", "/start_ollama.sh"]
+    image: lmstudio/llmster-preview:cpu
+    platform: linux/amd64
     environment:
-      OLLAMA_HOST: "0.0.0.0:11434"
-      OLLAMA_NUM_PARALLEL: "1"
-      OLLAMA_MAX_LOADED_MODELS: "1"
-      OLLAMA_KEEP_ALIVE: "30m"
-      OLLAMA_CONTEXT_LENGTH: "${LLM_CONTEXT_LENGTH:-16000}"
       OMP_NUM_THREADS: "${LLM_THREADS:-12}"
-      RAG_LOCAL_LLM_MODEL: "${RAG_LOCAL_LLM_MODEL:-qwen2.5:7b}"
+      GGML_NUM_THREADS: "${LLM_THREADS:-12}"
+      OPENBLAS_NUM_THREADS: "${LLM_THREADS:-12}"
+      RAG_LOCAL_LLM_MODEL: "${RAG_LOCAL_LLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-GGUF}"
+      LM_STUDIO_MODEL_IDENTIFIER: "${LM_STUDIO_MODEL_IDENTIFIER:-qwen2.5-7b-ctx16k}"
+      LLM_CONTEXT_LENGTH: "${LLM_CONTEXT_LENGTH:-16000}"
     volumes:
-      - ./scripts/start_ollama.sh:/start_ollama.sh:ro
-      - ollama_data:/root/.ollama
+      - lmstudio_data:/root/.lmstudio
     ports:
-      - "${LLM_PORT:-11434}:11434"
+      - "${LLM_PORT:-1234}:1234"
     cpus: "${LLM_CPUS:-12}"
     mem_limit: "${LLM_MEM_LIMIT:-32g}"
     memswap_limit: "${LLM_MEM_LIMIT:-32g}"
     healthcheck:
-      test: ["CMD", "ollama", "list"]
+      test: ["CMD-SHELL", "lms ls --host 127.0.0.1 --port 1234 >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 20s
+      retries: 20
+      start_period: 30s
     restart: unless-stopped
     profiles: ["development"]
 
 volumes:
-  ollama_data:
+  lmstudio_data:
