@@ -24,15 +24,14 @@ docker compose --profile development logs -f llm
 3. Download a model in the LM Studio catalog format:
 
 ```bash
-docker compose --profile development exec llm \
-  lms get "${RAG_LOCAL_LLM_MODEL:-qwen2.5-7b}" --yes
+docker compose --profile development exec llm lms get qwen/qwen2.5-7b --yes
 ```
 
 4. Load the model with a 16k context window and a stable identifier:
 
 ```bash
 docker compose --profile development exec llm \
-  lms load "${RAG_LOCAL_LLM_MODEL:-qwen2.5-7b}" \
+  lms load qwen/qwen2.5-7b \
   --identifier "${LM_STUDIO_MODEL_IDENTIFIER:-qwen2.5-7b-ctx16k}" \
   --context-length "${LLM_CONTEXT_LENGTH:-16000}" \
   --gpu off \
@@ -55,7 +54,7 @@ LLM_CPUS=12
 LLM_THREADS=12
 LLM_MEM_LIMIT=32g
 LLM_CONTEXT_LENGTH=16000
-RAG_LOCAL_LLM_MODEL=qwen2.5-7b
+RAG_LOCAL_LLM_MODEL=qwen2.5-7b-instruct-1m
 LM_STUDIO_MODEL_IDENTIFIER=qwen2.5-7b-ctx16k
 ```
 
@@ -66,7 +65,7 @@ Meaning:
 - `LLM_THREADS`: thread count exposed to runtime (`OMP_NUM_THREADS`, `GGML_NUM_THREADS`, `OPENBLAS_NUM_THREADS`).
 - `LLM_MEM_LIMIT`: memory cap for container and swap cap.
 - `LLM_CONTEXT_LENGTH`: context window passed to `lms load`.
-- `RAG_LOCAL_LLM_MODEL`: LM Studio search key (`qwen2.5-7b`).
+- `RAG_LOCAL_LLM_MODEL`: LM Studio model key (`qwen2.5-7b-instruct-1m`).
 - `LM_STUDIO_MODEL_IDENTIFIER`: model name served on OpenAI-compatible endpoints.
 
 ## OpenAI-Compatible Test
