@@ -10,7 +10,7 @@ This project runs an Ollama container in CPU mode with configurable limits.
 ## Files
 
 - `docker-compose.yml`: service definition and resource limits.
-- `docker/ollama-openclaw/Dockerfile`: extends Ollama image and installs `openclaw`.
+- `docker/ollama-openclaw/Dockerfile`: uses `node:22` base, installs Ollama, then installs `openclaw`.
 - `scripts/start_ollama.sh`: starts Ollama, waits for readiness, and pulls the model.
 
 ## Quick Start
