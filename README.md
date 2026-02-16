@@ -1,74 +1,62 @@
 # Local CPU LLM with LM Studio (llmster)
 
-This project runs LM Studio headless server (`lmstudio/llmster-preview:cpu`) in CPU mode with configurable limits.
+This project builds a custom Docker image from `ubuntu:24.04`, installs `llmster`/`lms`, and runs LM Studio headless in CPU mode.
 
 ## Prerequisites
 
 - Docker Engine
 - Docker Compose plugin (`docker compose`)
 
+## Files
+
+- `docker-compose.yml`: service definition and resource limits.
+- `docker/lmster/Dockerfile`: base image + LM Studio CLI installation.
+- `scripts/start_lmster.sh`: starts LM Studio daemon and API server.
+
 ## Quick Start
 
-1. Start the service:
+1. Build and start:
 
 ```bash
-docker compose --profile development up -d llm
+docker compose --profile development up -d --build llm
 ```
 
-2. Watch logs:
+2. Check logs:
 
 ```bash
 docker compose --profile development logs -f llm
 ```
 
-3. Download a model in the LM Studio catalog format:
+3. Install GGUF runtime (one-time on a fresh volume):
+
+```bash
+docker compose --profile development exec llm lms runtime get llama.cpp
+```
+
+4. Download Qwen 2.5 7B Instruct:
 
 ```bash
 docker compose --profile development exec llm lms get qwen/qwen2.5-7b --yes
 ```
 
-4. Load the model with a 16k context window and a stable identifier:
+5. Load model with 16k context and stable identifier:
 
 ```bash
 docker compose --profile development exec llm \
   lms load qwen/qwen2.5-7b \
-  --identifier "${LM_STUDIO_MODEL_IDENTIFIER:-qwen2.5-7b-ctx16k}" \
-  --context-length "${LLM_CONTEXT_LENGTH:-16000}" \
+  --identifier qwen2.5-7b-ctx16k \
+  --context-length 16000 \
   --gpu off \
   --yes
 ```
 
-5. Verify the model is loaded:
+6. Verify loaded model:
 
 ```bash
 docker compose --profile development exec llm lms ps --json
 ```
 
-## Configuration
-
-Set environment variables in a local `.env` file (same directory as `docker-compose.yml`) or inline in your shell.
-
-```env
-LLM_PORT=1234
-LLM_CPUS=12
-LLM_THREADS=12
-LLM_MEM_LIMIT=32g
-LLM_CONTEXT_LENGTH=16000
-RAG_LOCAL_LLM_MODEL=qwen2.5-7b-instruct-1m
-LM_STUDIO_MODEL_IDENTIFIER=qwen2.5-7b-ctx16k
-```
-
-Meaning:
-
-- `LLM_PORT`: host port mapped to LM Studio server (`1234` in container).
-- `LLM_CPUS`: CPU quota for the container.
-- `LLM_THREADS`: thread count exposed to runtime (`OMP_NUM_THREADS`, `GGML_NUM_THREADS`, `OPENBLAS_NUM_THREADS`).
-- `LLM_MEM_LIMIT`: memory cap for container and swap cap.
-- `LLM_CONTEXT_LENGTH`: context window passed to `lms load`.
-- `RAG_LOCAL_LLM_MODEL`: LM Studio model key (`qwen2.5-7b-instruct-1m`).
-- `LM_STUDIO_MODEL_IDENTIFIER`: model name served on OpenAI-compatible endpoints.
-
-## OpenAI-Compatible Test
+7. Test OpenAI-compatible endpoint:
 
 ```bash
 curl http://localhost:1234/v1/chat/completions \
@@ -82,6 +70,20 @@ curl http://localhost:1234/v1/chat/completions \
   }'
 ```
 
+## Compose Variables
+
+Only these variables are used by `docker-compose.yml`:
+
+```env
+LLM_PORT=1234
+LLM_CPUS=12
+LLM_MEM_LIMIT=32g
+```
+
+- `LLM_PORT`: host port mapped to LM Studio server (`1234` in container).
+- `LLM_CPUS`: CPU quota for container.
+- `LLM_MEM_LIMIT`: memory cap for container and swap cap.
+
 ## Stop and Cleanup
 
 Stop services:
@@ -90,7 +92,7 @@ Stop services:
 docker compose --profile development down
 ```
 
-Stop and remove volumes (deletes downloaded models):
+Stop and remove volumes (deletes downloaded models and runtimes):
 
 ```bash
 docker compose --profile development down -v
