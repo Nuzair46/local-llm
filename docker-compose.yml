@@ -1,24 +1,31 @@
 services:
   llm:
-    build:
-      context: .
-      dockerfile: docker/lmster/Dockerfile
-    image: local/lmster:latest
+    image: ollama/ollama:latest
+    entrypoint: ["/bin/sh", "/start_ollama.sh"]
+    environment:
+      OLLAMA_HOST: "0.0.0.0:11434"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_KEEP_ALIVE: "30m"
+      OLLAMA_CONTEXT_LENGTH: "17000"
+      OMP_NUM_THREADS: "${LLM_THREADS:-12}"
+      RAG_LOCAL_LLM_MODEL: "${RAG_LOCAL_LLM_MODEL:-qwen2.5:7b}"
     volumes:
-      - lmstudio_data:/root/.lmstudio
+      - ./scripts/start_ollama.sh:/start_ollama.sh:ro
+      - ollama_data:/root/.ollama
     ports:
-      - "${LLM_PORT:-1234}:1234"
+      - "${LLM_PORT:-11434}:11434"
     cpus: "${LLM_CPUS:-12}"
     mem_limit: "${LLM_MEM_LIMIT:-32g}"
     memswap_limit: "${LLM_MEM_LIMIT:-32g}"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:1234/v1/models >/dev/null"]
+      test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
-      retries: 20
-      start_period: 30s
+      retries: 10
+      start_period: 20s
     restart: unless-stopped
     profiles: ["development"]
 
 volumes:
-  lmstudio_data:
+  ollama_data:

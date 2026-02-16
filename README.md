@@ -1,6 +1,6 @@
-# Local CPU LLM with LM Studio (llmster)
+# Local CPU LLM with Docker Compose
 
-This project builds a custom Docker image from `ubuntu:24.04`, installs `llmster`/`lms`, and runs LM Studio headless in CPU mode.
+This project runs an Ollama container in CPU mode with configurable limits.
 
 ## Prerequisites
 
@@ -10,79 +10,59 @@ This project builds a custom Docker image from `ubuntu:24.04`, installs `llmster
 ## Files
 
 - `docker-compose.yml`: service definition and resource limits.
-- `docker/lmster/Dockerfile`: base image + LM Studio CLI installation.
-- `scripts/start_lmster.sh`: starts LM Studio daemon and API server.
+- `scripts/start_ollama.sh`: starts Ollama, waits for readiness, and pulls the model.
 
 ## Quick Start
 
-1. Build and start:
+1. Start the service:
 
 ```bash
-docker compose --profile development up -d --build llm
+docker compose --profile development up -d
 ```
 
-2. Check logs:
+2. Watch logs (first boot pulls the model and can take time):
 
 ```bash
 docker compose --profile development logs -f llm
 ```
 
-3. Install GGUF runtime (one-time on a fresh volume):
+3. Check container status:
 
 ```bash
-docker compose --profile development exec llm lms runtime get llama.cpp
+docker compose --profile development ps
 ```
 
-4. Download Qwen 2.5 7B Instruct:
+## Configuration
 
-```bash
-docker compose --profile development exec llm lms get qwen/qwen2.5-7b --yes
-```
-
-5. Load model with 16k context and stable identifier:
-
-```bash
-docker compose --profile development exec llm \
-  lms load qwen/qwen2.5-7b \
-  --identifier qwen2.5-7b-ctx16k \
-  --context-length 16000 \
-  --gpu off \
-  --yes
-```
-
-6. Verify loaded model:
-
-```bash
-docker compose --profile development exec llm lms ps --json
-```
-
-7. Test OpenAI-compatible endpoint:
-
-```bash
-curl http://localhost:1234/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model":"qwen2.5-7b-ctx16k",
-    "messages":[
-      {"role":"user","content":"Say hello in one short sentence."}
-    ],
-    "temperature":0.2
-  }'
-```
-
-## Compose Variables
-
-Only these variables are used by `docker-compose.yml`:
+Set environment variables in a local `.env` file (same directory as `docker-compose.yml`) or inline in your shell.
 
 ```env
-LLM_PORT=1234
+LLM_PORT=11434
 LLM_CPUS=12
+LLM_THREADS=12
 LLM_MEM_LIMIT=32g
+RAG_LOCAL_LLM_MODEL=qwen2.5:7b
 ```
 
-- `LLM_PORT`: host port mapped to LM Studio server (`1234` in container).
-- `LLM_CPUS`: CPU quota for container.
+Meaning:
+
+- `LLM_PORT`: host port mapped to Ollama (`11434` in container).
+- `LLM_CPUS`: CPU quota for the container.
+- `LLM_THREADS`: thread count exposed to runtime (`OMP_NUM_THREADS`).
 - `LLM_MEM_LIMIT`: memory cap for container and swap cap.
+- `OLLAMA_CONTEXT_LENGTH`: fixed to `17000` in `docker-compose.yml`.
+- `RAG_LOCAL_LLM_MODEL`: model pulled on startup.
+
+## Test a Request
+
+```bash
+curl http://localhost:11434/api/generate \
+  -d '{
+    "model":"qwen2.5:7b",
+    "prompt":"Say hello in one short sentence.",
+    "stream": false
+  }'
+```
 
 ## Stop and Cleanup
 
@@ -92,7 +72,7 @@ Stop services:
 docker compose --profile development down
 ```
 
-Stop and remove volumes (deletes downloaded models and runtimes):
+Stop and remove volumes (deletes downloaded models):
 
 ```bash
 docker compose --profile development down -v
