@@ -41,6 +41,7 @@ LLM_PORT=11434
 LLM_CPUS=12
 LLM_THREADS=12
 LLM_MEM_LIMIT=32g
+LLM_CONTEXT_LENGTH=16000
 RAG_LOCAL_LLM_MODEL=qwen2.5:7b
 ```
 
@@ -50,6 +51,7 @@ Meaning:
 - `LLM_CPUS`: CPU quota for the container.
 - `LLM_THREADS`: thread count exposed to runtime (`OMP_NUM_THREADS`).
 - `LLM_MEM_LIMIT`: memory cap for container and swap cap.
+- `LLM_CONTEXT_LENGTH`: default context window (`OLLAMA_CONTEXT_LENGTH`).
 - `RAG_LOCAL_LLM_MODEL`: model pulled on startup.
 
 ## Test a Request
