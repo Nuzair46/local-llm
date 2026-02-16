@@ -1,6 +1,6 @@
 services:
   llm:
-    image: lmstudio/llmster-preview:cpu
+    image: lmstudio/llmster:cpu
     platform: linux/amd64
     environment:
       OMP_NUM_THREADS: "${LLM_THREADS:-12}"
