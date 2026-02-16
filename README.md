@@ -10,6 +10,7 @@ This project runs an Ollama container in CPU mode with configurable limits.
 ## Files
 
 - `docker-compose.yml`: service definition and resource limits.
+- `docker/ollama-openclaw/Dockerfile`: extends Ollama image and installs `openclaw`.
 - `scripts/start_ollama.sh`: starts Ollama, waits for readiness, and pulls the model.
 
 ## Quick Start
@@ -17,7 +18,7 @@ This project runs an Ollama container in CPU mode with configurable limits.
 1. Start the service:
 
 ```bash
-docker compose --profile development up -d
+docker compose --profile development up -d --build
 ```
 
 2. Watch logs (first boot pulls the model and can take time):
@@ -30,6 +31,12 @@ docker compose --profile development logs -f llm
 
 ```bash
 docker compose --profile development ps
+```
+
+4. Verify `openclaw` is installed in the container:
+
+```bash
+docker compose --profile development exec llm openclaw --version
 ```
 
 ## Configuration

@@ -1,6 +1,9 @@
 services:
   llm:
-    image: ollama/ollama:latest
+    build:
+      context: .
+      dockerfile: docker/ollama-openclaw/Dockerfile
+    image: local/ollama-openclaw:latest
     entrypoint: ["/bin/sh", "/start_ollama.sh"]
     environment:
       OLLAMA_HOST: "0.0.0.0:11434"
